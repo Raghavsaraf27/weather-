@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimal Dark Local Weather</title>
+  <!-- Link to premium vector icons (no watermarks) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
+  <style>
+    :root {
+      /* Notion dark mode background color */
+      --bg-color: #191919;
+      --card-bg: #222222;
+      --text-main: #f0f0f0;
+      --text-dim: #787774;
+      --accent: #2eaadc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      /* Dynamic height based on container resize */
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    /* Main Container (Vertical layout similar to Indify reference) */
+    .weather-widget {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 5px;
+    }
+
+    /* Location Header */
+    .location-header {
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 600;
+      /* Small, clean font size */
+      font-size: clamp(0.7rem, 2.5vw, 1rem);
+      margin-bottom: 2px;
+      letter-spacing: 1px;
+    }
+
+    /* Current Weather Block */
+    .current-weather {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .current-icon {
+      font-size: clamp(2rem, 10vw, 4rem);
+      color: var(--accent);
+      margin: 4px 0;
+    }
+
+    .current-temp {
+      font-size: clamp(1.8rem, 9vw, 3rem);
+      font-weight: 300;
+      color: var(--text-main);
+    }
+
+    .current-condition {
+      font-size: clamp(0.7rem, 2vw, 0.9rem);
+      color: var(--text-dim);
+      margin-top: -2px;
+      text-transform: lowercase;
+    }
+
+    /* Forecast Section */
+    .forecast-container {
+      width: 100%;
+      flex-grow: 1; /* Occupies remaining space vertically */
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 0 10px;
+    }
+
+    .forecast-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-dim);
+      font-size: clamp(0.65rem, 2.2vw, 0.95rem);
+    }
+
+    .day-abbr {
+      width: 30px;
+      font-weight: 500;
+      text-align: left;
+    }
+
+    .forecast-icon {
+      font-size: clamp(1rem, 4vw, 1.8rem);
+      color: var(--text-main);
+      width: 30px;
+      text-align: center;
+    }
+
+    .temp-block {
+      text-align: right;
+      width: 40px;
+    }
+
+    .temp-block div:last-child {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* Fallback/Status Messages */
+    #status-msg {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      height: 100vh;
+      width: 100vw;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="status-msg">Fetching Location...</div>
+
+  <div class="weather-widget" style="display: none;" id="widget-container">
+    <div id="location" class="location-header">SAN FRANCISCO</div>
+
+    <div class="current-weather">
+      <i id="current-icon" class="wi wi-day-sunny current-icon"></i>
+      <div id="current-temp" class="current-temp">--°F</div>
+      <div id="current-condition" class="current-condition">clear sky</div>
+    </div>
+
+    <div class="forecast-container" id="forecast-list">
+      <!-- 5-Day Forecast Items Will Be Inserted Here -->
+    </div>
+  </div>
+
+  <script>
+    // CRUCIAL: Replace this empty key with your actual OpenWeatherMap API Key.
+    const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY';
+
+    const statusMsg = document.getElementById('status-msg');
+    const widgetContainer = document.getElementById('widget-container');
+    const locationHeader = document.getElementById('location');
+    const currentIcon = document.getElementById('current-icon');
+    const currentTemp = document.getElementById('current-temp');
+    const currentCondition = document.getElementById('current-condition');
+    const forecastList = document.getElementById('forecast-list');
+
+    function updateStatus(msg) {
+      statusMsg.innerText = msg;
+    }
+
+    // A mapping of OWM condition IDs to premium FontAwesome icons
+    function mapIcon(iconId) {
+      const code = Math.floor(iconId / 100);
+      switch (code) {
+        case 2: return 'wi-thunderstorm';
+        case 3: return 'wi-sprinkle';
+        case 5: return 'wi-rain';
+        case 6: return 'wi-snow';
+        case 7: return 'wi-fog';
+        case 8: return iconId === 800 ? 'wi-day-sunny' : 'wi-cloudy';
+        default: return 'wi-day-sunny';
+      }
+    }
+
+    async function fetchWeather(lat, lon) {
+      updateStatus("Updating...");
+      try {
+        const responseCurrent = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`);
+        const currentData = await responseCurrent.json();
+
+        // Update Current Weather
+        locationHeader.innerText = currentData.name;
+        currentTemp.innerText = Math.round(currentData.main.temp) + '°F';
+        currentCondition.innerText = currentData.weather[0].description;
+        currentIcon.className = `wi ${mapIcon(currentData.weather[0].id)} current-icon`;
+
+        // Update Forecast
+        const responseForecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`);
+        const forecastData = await responseForecast.json();
+        forecastList.innerHTML = ''; // Clear previous forecast
+
+        // Group forecast by day and get unique daily high/low
+        const dailyForecast = {};
+        forecastData.list.forEach(item => {
+          const date = new Date(item.dt * 1000);
+          const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+          if (!dailyForecast[dayName]) {
+            dailyForecast[dayName] = { high: -Infinity, low: Infinity, iconId: item.weather[0].id };
+          }
+          if (item.main.temp_max > dailyForecast[dayName].high) dailyForecast[dayName].high = item.main.temp_max;
+          if (item.main.temp_min < dailyForecast[dayName].low) dailyForecast[dayName].low = item.main.temp_min;
+        });
+
+        // Display up to 5 days of forecast (skipping today if needed)
+        const daysToShow = Object.keys(dailyForecast).slice(0, 5);
+        daysToShow.forEach(dayName => {
+          const day = dailyForecast[dayName];
+          const forecastItem = document.createElement('div');
+          forecastItem.className = 'forecast-item';
+          forecastItem.innerHTML = `
+            <div class="day-abbr">${dayName}</div>
+            <i class="wi ${mapIcon(day.iconId)} forecast-icon"></i>
+            <div class="temp-block">
+              <div>${Math.round(day.high)}°F</div>
+              <div>${Math.round(day.low)}°F</div>
+            </div>
+          `;
+          forecastList.appendChild(forecastItem);
+        });
+
+        statusMsg.style.display = 'none';
+        widgetContainer.style.display = 'flex';
+
+      } catch (error) {
+        updateStatus("Error fetching weather. Check API key.");
+        console.error(error);
+      }
+    }
+
+    // MAIN EXECUTION: Get local location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(position => {
+        const { latitude, longitude } = position.coords;
+        fetchWeather(latitude, longitude);
+      }, error => {
+        updateStatus("Enable location access to use this widget.");
+        console.error(error);
+      });
+    } else {
+      updateStatus("Geolocation is not supported by your browser.");
+    }
+  </script>
+</body>
+</html>
