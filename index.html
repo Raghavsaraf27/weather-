@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minimal Dark Weather</title>
+  <title>Aesthetic Weather Widget</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg-color: #191919;
-      --card-bg: #222222;
-      --text-main: #e3e3e3;
-      --text-dim: #787774;
-      --accent: #2eaadc;
+      --card-bg: #202020;
+      --border-color: #333333;
+      --text-main: #f5f5f5;
+      --text-muted: #888888;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       user-select: none;
     }
 
@@ -27,130 +28,187 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      padding: 12px;
+      padding: 16px;
       overflow: hidden;
     }
 
-    .weather-card {
+    .widget-container {
       width: 100%;
-      max-width: 280px;
-      background-color: var(--card-bg);
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-      text-align: center;
-      color: var(--text-main);
-    }
-
-    .location {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-
-    .temp-main {
-      font-size: 2.8rem;
-      font-weight: 300;
-      color: var(--text-main);
-      margin: 4px 0;
-    }
-
-    .condition {
-      font-size: 0.9rem;
-      color: var(--text-dim);
-      margin-bottom: 16px;
-      text-transform: capitalize;
-    }
-
-    .forecast {
+      max-width: 300px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      padding-top: 12px;
+      gap: 16px;
     }
 
-    .forecast-row {
+    /* Top Section: Location & Description */
+    .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.85rem;
-      color: var(--text-dim);
     }
 
-    .day-name {
+    .location {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      letter-spacing: 0.5px;
+    }
+
+    .condition {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: capitalize;
+      background: #2a2a2a;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    /* Middle Section: Big Icon & Temp */
+    .main-weather {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+
+    .icon-large {
+      font-size: 4.5rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.15));
+      /* Cute floating animation */
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .temp-large {
+      font-size: 3.5rem;
+      font-weight: 300;
+      color: var(--text-main);
+      letter-spacing: -2px;
+    }
+
+    /* Bottom Section: Forecast */
+    .forecast-container {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+    }
+
+    .forecast-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .f-day-name {
+      font-size: 0.75rem;
+      color: var(--text-muted);
       font-weight: 500;
-      width: 40px;
-      text-align: left;
     }
 
-    .high-low {
+    .f-icon {
+      font-size: 1.2rem;
+    }
+
+    .f-temp {
+      font-size: 0.8rem;
       color: var(--text-main);
       font-weight: 500;
     }
 
     #loading {
-      color: var(--text-dim);
+      color: var(--text-muted);
       font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
 
-  <div id="loading">Loading local weather...</div>
+  <div id="loading">Loading aesthetic weather...</div>
 
-  <div class="weather-card" id="card" style="display: none;">
-    <div class="location" id="city">--</div>
-    <div class="temp-main" id="temp">--°C</div>
-    <div class="condition" id="desc">--</div>
-
-    <div class="forecast" id="forecast-list">
-      <!-- Forecast Rows -->
+  <div class="widget-container" id="widget" style="display: none;">
+    
+    <div class="header">
+      <div class="location" id="city">--</div>
+      <div class="condition" id="desc">--</div>
     </div>
+
+    <div class="main-weather">
+      <div class="icon-large" id="main-icon">☀️</div>
+      <div class="temp-large" id="temp">--°</div>
+    </div>
+
+    <div class="forecast-container" id="forecast">
+      <!-- Forecast days go here -->
+    </div>
+
   </div>
 
   <script>
-    // Uses free wttr.in weather service (No API Key Required!)
+    // Helper function to turn text descriptions into cute emojis
+    function getWeatherEmoji(desc) {
+      desc = desc.toLowerCase();
+      if (desc.includes('sun') || desc.includes('clear')) return '☀️';
+      if (desc.includes('partly cloudy')) return '⛅';
+      if (desc.includes('cloud') || desc.includes('overcast')) return '☁️';
+      if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return '🌧️';
+      if (desc.includes('thunder') || desc.includes('storm')) return '⛈️';
+      if (desc.includes('snow') || desc.includes('ice') || desc.includes('blizzard')) return '❄️';
+      if (desc.includes('fog') || desc.includes('mist')) return '🌫️';
+      return '🌤️'; // Default
+    }
+
     async function loadWeather() {
       try {
         const response = await fetch('https://wttr.in/?format=j1');
         if (!response.ok) throw new Error('Network error');
-        
         const data = await response.json();
         
-        // Location & Current Weather
+        // 1. Current Weather
         const area = data.nearest_area[0];
         const cityName = area.areaName[0].value || area.region[0].value;
         const current = data.current_condition[0];
+        const conditionText = current.weatherDesc[0].value;
 
         document.getElementById('city').innerText = cityName;
-        document.getElementById('temp').innerText = `${current.temp_C}°C`;
-        document.getElementById('desc').innerText = current.weatherDesc[0].value.toLowerCase();
+        document.getElementById('desc').innerText = conditionText.toLowerCase();
+        document.getElementById('temp').innerText = `${current.temp_C}°`;
+        document.getElementById('main-icon').innerText = getWeatherEmoji(conditionText);
 
-        // 3-Day Forecast
-        const forecastContainer = document.getElementById('forecast-list');
+        // 2. Forecast (Next 3 Days)
+        const forecastContainer = document.getElementById('forecast');
         forecastContainer.innerHTML = '';
 
-        data.weather.forEach(dayData => {
+        // We use slice(0,3) to get exactly 3 days to fit the design nicely
+        data.weather.slice(0, 3).forEach(dayData => {
           const dateObj = new Date(dayData.date);
           const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          const dayCondition = dayData.hourly[4].weatherDesc[0].value; 
           
-          const row = document.createElement('div');
-          row.className = 'forecast-row';
-          row.innerHTML = `
-            <span class="day-name">${dayName}</span>
-            <span>${dayData.hourly[4].weatherDesc[0].value}</span>
-            <span class="high-low">${dayData.maxtempC}° / ${dayData.mintempC}°C</span>
+          const dayHtml = `
+            <div class="forecast-day">
+              <div class="f-day-name">${dayName}</div>
+              <div class="f-icon">${getWeatherEmoji(dayCondition)}</div>
+              <div class="f-temp">${dayData.maxtempC}°</div>
+            </div>
           `;
-          forecastContainer.appendChild(row);
+          forecastContainer.innerHTML += dayHtml;
         });
 
+        // Show the widget
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('card').style.display = 'block';
+        document.getElementById('widget').style.display = 'flex';
 
       } catch (err) {
         document.getElementById('loading').innerText = 'Unable to load weather.';
