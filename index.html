@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aesthetic Weather Widget</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg-color: #191919;
@@ -12,13 +11,16 @@
       --border-color: #333333;
       --text-main: #f5f5f5;
       --text-muted: #888888;
+      --accent-yellow: #f1c40f;
+      --accent-blue: #3498db;
+      --accent-cloud: #bdc3c7;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       user-select: none;
     }
 
@@ -45,7 +47,6 @@
       gap: 16px;
     }
 
-    /* Top Section: Location & Description */
     .header {
       display: flex;
       justify-content: space-between;
@@ -68,7 +69,6 @@
       border-radius: 12px;
     }
 
-    /* Middle Section: Big Icon & Temp */
     .main-weather {
       display: flex;
       align-items: center;
@@ -77,16 +77,14 @@
     }
 
     .icon-large {
-      font-size: 4.5rem;
-      line-height: 1;
-      filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.15));
-      /* Cute floating animation */
+      width: 70px;
+      height: 70px;
       animation: float 3s ease-in-out infinite;
     }
 
     @keyframes float {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
+      50% { transform: translateY(-6px); }
     }
 
     .temp-large {
@@ -96,7 +94,6 @@
       letter-spacing: -2px;
     }
 
-    /* Bottom Section: Forecast */
     .forecast-container {
       display: flex;
       justify-content: space-between;
@@ -108,7 +105,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
 
     .f-day-name {
@@ -118,7 +115,8 @@
     }
 
     .f-icon {
-      font-size: 1.2rem;
+      width: 24px;
+      height: 24px;
     }
 
     .f-temp {
@@ -130,6 +128,11 @@
     #loading {
       color: var(--text-muted);
       font-size: 0.9rem;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
@@ -145,7 +148,7 @@
     </div>
 
     <div class="main-weather">
-      <div class="icon-large" id="main-icon">☀️</div>
+      <div class="icon-large" id="main-icon"></div>
       <div class="temp-large" id="temp">--°</div>
     </div>
 
@@ -156,17 +159,22 @@
   </div>
 
   <script>
-    // Helper function to turn text descriptions into cute emojis
-    function getWeatherEmoji(desc) {
+    // Inline SVG Icon Definitions
+    const icons = {
+      sun: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-yellow)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+      cloud: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-cloud)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`,
+      rain: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13v6M8 13v6M12 15v6"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" stroke="var(--accent-cloud)"/></svg>`,
+      partlyCloudy: `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M4.93 4.93l1.41 1.41M20 12h2M17.07 4.93l-1.41 1.41" stroke="var(--accent-yellow)"/><path d="M15.93 12.07a5 5 0 0 0-8.86 3.18A5 5 0 0 0 9 20h9a4 4 0 0 0 1.25-7.8 8 8 0 0 0-3.32-0.13z" stroke="var(--accent-cloud)"/></svg>`,
+      snow: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-cloud)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="12" y1="16" x2="12.01" y2="16"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="10" y1="20" x2="10.01" y2="20"/><line x1="14" y1="20" x2="14.01" y2="20"/></svg>`
+    };
+
+    function getWeatherSvg(desc) {
       desc = desc.toLowerCase();
-      if (desc.includes('sun') || desc.includes('clear')) return '☀️';
-      if (desc.includes('partly cloudy')) return '⛅';
-      if (desc.includes('cloud') || desc.includes('overcast')) return '☁️';
-      if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return '🌧️';
-      if (desc.includes('thunder') || desc.includes('storm')) return '⛈️';
-      if (desc.includes('snow') || desc.includes('ice') || desc.includes('blizzard')) return '❄️';
-      if (desc.includes('fog') || desc.includes('mist')) return '🌫️';
-      return '🌤️'; // Default
+      if (desc.includes('sun') || desc.includes('clear')) return icons.sun;
+      if (desc.includes('partly cloudy')) return icons.partlyCloudy;
+      if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return icons.rain;
+      if (desc.includes('snow') || desc.includes('ice')) return icons.snow;
+      return icons.cloud;
     }
 
     async function loadWeather() {
@@ -175,7 +183,6 @@
         if (!response.ok) throw new Error('Network error');
         const data = await response.json();
         
-        // 1. Current Weather
         const area = data.nearest_area[0];
         const cityName = area.areaName[0].value || area.region[0].value;
         const current = data.current_condition[0];
@@ -184,13 +191,11 @@
         document.getElementById('city').innerText = cityName;
         document.getElementById('desc').innerText = conditionText.toLowerCase();
         document.getElementById('temp').innerText = `${current.temp_C}°`;
-        document.getElementById('main-icon').innerText = getWeatherEmoji(conditionText);
+        document.getElementById('main-icon').innerHTML = getWeatherSvg(conditionText);
 
-        // 2. Forecast (Next 3 Days)
         const forecastContainer = document.getElementById('forecast');
         forecastContainer.innerHTML = '';
 
-        // We use slice(0,3) to get exactly 3 days to fit the design nicely
         data.weather.slice(0, 3).forEach(dayData => {
           const dateObj = new Date(dayData.date);
           const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
@@ -199,14 +204,13 @@
           const dayHtml = `
             <div class="forecast-day">
               <div class="f-day-name">${dayName}</div>
-              <div class="f-icon">${getWeatherEmoji(dayCondition)}</div>
+              <div class="f-icon">${getWeatherSvg(dayCondition)}</div>
               <div class="f-temp">${dayData.maxtempC}°</div>
             </div>
           `;
           forecastContainer.innerHTML += dayHtml;
         });
 
-        // Show the widget
         document.getElementById('loading').style.display = 'none';
         document.getElementById('widget').style.display = 'flex';
 
