@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minimal Dark Local Weather</title>
-  <!-- Link to premium vector icons (no watermarks) -->
+  <!-- Link to premium weather icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
   <style>
     :root {
@@ -30,13 +30,12 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      /* Dynamic height based on container resize */
       min-height: 100vh;
       overflow: hidden;
       padding: 10px;
     }
 
-    /* Main Container (Vertical layout similar to Indify reference) */
+    /* Main Container */
     .weather-widget {
       width: 100%;
       height: 100%;
@@ -52,7 +51,6 @@
       text-transform: uppercase;
       color: var(--text-dim);
       font-weight: 600;
-      /* Small, clean font size */
       font-size: clamp(0.7rem, 2.5vw, 1rem);
       margin-bottom: 2px;
       letter-spacing: 1px;
@@ -88,7 +86,7 @@
     /* Forecast Section */
     .forecast-container {
       width: 100%;
-      flex-grow: 1; /* Occupies remaining space vertically */
+      flex-grow: 1;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -126,7 +124,7 @@
       font-weight: 500;
     }
 
-    /* Fallback/Status Messages */
+    /* Status Messages */
     #status-msg {
       display: flex;
       justify-content: center;
@@ -140,25 +138,29 @@
 </head>
 <body>
 
-  <div id="status-msg">Fetching Location...</div>
+  <div id="status-msg">Loading weather...</div>
 
   <div class="weather-widget" style="display: none;" id="widget-container">
-    <div id="location" class="location-header">SAN FRANCISCO</div>
+    <div id="location" class="location-header">--</div>
 
     <div class="current-weather">
       <i id="current-icon" class="wi wi-day-sunny current-icon"></i>
-      <div id="current-temp" class="current-temp">--°F</div>
-      <div id="current-condition" class="current-condition">clear sky</div>
+      <div id="current-temp" class="current-temp">--°C</div>
+      <div id="current-condition" class="current-condition">--</div>
     </div>
 
     <div class="forecast-container" id="forecast-list">
-      <!-- 5-Day Forecast Items Will Be Inserted Here -->
+      <!-- 5-Day Forecast Items -->
     </div>
   </div>
 
   <script>
-    // CRUCIAL: Replace this empty key with your actual OpenWeatherMap API Key.
+    // 1. PASTE YOUR OPENWEATHERMAP API KEY HERE:
     const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY';
+
+    // Default fallback coordinates (Bengaluru)
+    const defaultLat = 12.9716;  
+    const defaultLon = 77.5946;  
 
     const statusMsg = document.getElementById('status-msg');
     const widgetContainer = document.getElementById('widget-container');
@@ -172,7 +174,6 @@
       statusMsg.innerText = msg;
     }
 
-    // A mapping of OWM condition IDs to premium FontAwesome icons
     function mapIcon(iconId) {
       const code = Math.floor(iconId / 100);
       switch (code) {
@@ -187,23 +188,26 @@
     }
 
     async function fetchWeather(lat, lon) {
-      updateStatus("Updating...");
       try {
-        const responseCurrent = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`);
+        const responseCurrent = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+        
+        if (!responseCurrent.ok) {
+          throw new Error("Invalid API key or key still activating");
+        }
+
         const currentData = await responseCurrent.json();
 
         // Update Current Weather
         locationHeader.innerText = currentData.name;
-        currentTemp.innerText = Math.round(currentData.main.temp) + '°F';
+        currentTemp.innerText = Math.round(currentData.main.temp) + '°C';
         currentCondition.innerText = currentData.weather[0].description;
         currentIcon.className = `wi ${mapIcon(currentData.weather[0].id)} current-icon`;
 
         // Update Forecast
-        const responseForecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`);
+        const responseForecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
         const forecastData = await responseForecast.json();
-        forecastList.innerHTML = ''; // Clear previous forecast
+        forecastList.innerHTML = ''; 
 
-        // Group forecast by day and get unique daily high/low
         const dailyForecast = {};
         forecastData.list.forEach(item => {
           const date = new Date(item.dt * 1000);
@@ -215,7 +219,6 @@
           if (item.main.temp_min < dailyForecast[dayName].low) dailyForecast[dayName].low = item.main.temp_min;
         });
 
-        // Display up to 5 days of forecast (skipping today if needed)
         const daysToShow = Object.keys(dailyForecast).slice(0, 5);
         daysToShow.forEach(dayName => {
           const day = dailyForecast[dayName];
@@ -225,8 +228,8 @@
             <div class="day-abbr">${dayName}</div>
             <i class="wi ${mapIcon(day.iconId)} forecast-icon"></i>
             <div class="temp-block">
-              <div>${Math.round(day.high)}°F</div>
-              <div>${Math.round(day.low)}°F</div>
+              <div>${Math.round(day.high)}°C</div>
+              <div>${Math.round(day.low)}°C</div>
             </div>
           `;
           forecastList.appendChild(forecastItem);
@@ -236,22 +239,25 @@
         widgetContainer.style.display = 'flex';
 
       } catch (error) {
-        updateStatus("Error fetching weather. Check API key.");
+        updateStatus("Weather Error: Please check API key (new keys take ~15 mins to activate).");
         console.error(error);
       }
     }
 
-    // MAIN EXECUTION: Get local location
+    // MAIN EXECUTION: Try location first; if blocked by Notion, use default city immediately
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(position => {
-        const { latitude, longitude } = position.coords;
-        fetchWeather(latitude, longitude);
-      }, error => {
-        updateStatus("Enable location access to use this widget.");
-        console.error(error);
-      });
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          fetchWeather(position.coords.latitude, position.coords.longitude);
+        },
+        error => {
+          // If Notion blocks location access, use default coordinates seamlessly
+          fetchWeather(defaultLat, defaultLon);
+        },
+        { timeout: 2500 }
+      );
     } else {
-      updateStatus("Geolocation is not supported by your browser.");
+      fetchWeather(defaultLat, defaultLon);
     }
   </script>
 </body>
